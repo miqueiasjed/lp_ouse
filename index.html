@@ -984,19 +984,65 @@
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // Form handler
-document.getElementById('booking-form').addEventListener('submit', (e) => {
+document.getElementById('booking-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const btn = e.target.querySelector('button[type=submit]');
+  const form = e.target;
+  const btn = form.querySelector('button[type=submit]');
   const originalHTML = btn.innerHTML;
-  btn.innerHTML = '✓ Recebemos seu agendamento!';
-  btn.style.background = '#25D366';
-  btn.style.color = 'white';
-  setTimeout(() => {
-    btn.innerHTML = originalHTML;
-    btn.style.background = '';
-    btn.style.color = '';
-    e.target.reset();
-  }, 3000);
+
+  btn.disabled = true;
+  btn.innerHTML = 'Enviando...';
+
+  const payload = {
+    nome:     form.querySelector('#nome').value,
+    whatsapp: form.querySelector('#tel').value,
+    email:    form.querySelector('#email').value || undefined,
+    data:     form.querySelector('#data').value || undefined,
+    horario:  form.querySelector('#horario').value || undefined,
+  };
+
+  try {
+    const res = await fetch('https://app.ouseotica.com.br/api/v1/public/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      btn.innerHTML = '✓ Recebemos seu agendamento!';
+      btn.style.background = '#25D366';
+      btn.style.color = 'white';
+      form.reset();
+      setTimeout(() => {
+        btn.innerHTML = originalHTML;
+        btn.style.background = '';
+        btn.style.color = '';
+        btn.disabled = false;
+      }, 4000);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      const msg = data?.message || 'Ocorreu um erro. Tente novamente.';
+      btn.innerHTML = '✗ ' + msg;
+      btn.style.background = '#e53e3e';
+      btn.style.color = 'white';
+      setTimeout(() => {
+        btn.innerHTML = originalHTML;
+        btn.style.background = '';
+        btn.style.color = '';
+        btn.disabled = false;
+      }, 4000);
+    }
+  } catch {
+    btn.innerHTML = '✗ Falha na conexão. Tente novamente.';
+    btn.style.background = '#e53e3e';
+    btn.style.color = 'white';
+    setTimeout(() => {
+      btn.innerHTML = originalHTML;
+      btn.style.background = '';
+      btn.style.color = '';
+      btn.disabled = false;
+    }, 4000);
+  }
 });
 
 // Reveal on scroll for benefit cards
